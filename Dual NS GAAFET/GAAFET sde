@@ -1,17 +1,3 @@
-#	   	      Advanced Semiconductor Devices 2019-2020
-#		      ----------------------------------------
-#			Electrical & Electronic Engineeging
-#			-----------------------------------
-# 			      Imperial College London
-#			      -----------------------
-#			        Nanosheet FET in SDE
-#                          -------------------------
-# Students: 			\\ Enter your names here \\
-# Log In:			\\ Enter your user names here \\
-# CID:			\\ Enter your CID numbers here \\
-# Date:			\\ Enter the date of submission here \\
-#========================================================================================
-
 # Initialize
 #-----------
 	(set! process-up-direction "+z")
