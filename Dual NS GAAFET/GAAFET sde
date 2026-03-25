@@ -1,0 +1,153 @@
+#	   	      Advanced Semiconductor Devices 2019-2020
+#		      ----------------------------------------
+#			Electrical & Electronic Engineeging
+#			-----------------------------------
+# 			      Imperial College London
+#			      -----------------------
+#			        Nanosheet FET in SDE
+#                          -------------------------
+# Students: 			\\ Enter your names here \\
+# Log In:			\\ Enter your user names here \\
+# CID:			\\ Enter your CID numbers here \\
+# Date:			\\ Enter the date of submission here \\
+#========================================================================================
+
+# Initialize
+#-----------
+	(set! process-up-direction "+z")
+
+	(sdegeo:set-auto-region-naming OFF)
+
+	(sdegeo:set-default-boolean "ABA")
+
+# Create geometry
+#----------------
+#   z=0.000  Substrate top / BaseOx bottom
+#   z=0.001  BaseOx top / GateMetal bottom (1nm solid TiN below oxide)
+#   z=0.002  GateOx1 bottom (1nm SiO2 below NS1)
+#   z=0.003  Nanosheet1 bottom
+#   z=0.005  Nanosheet1 top (2nm)
+#   z=0.006  GateOx1 top (1nm SiO2 above NS1)
+#   z=0.007  GateMetal inter / GateOx2 bottom (1nm TiN between sheets)
+#   z=0.008  GateOx2 bottom (1nm SiO2 below NS2)
+#   z=0.009  Nanosheet2 bottom
+#   z=0.011  Nanosheet2 top (2nm)
+#   z=0.012  GateOx2 top (1nm SiO2 above NS2)
+#   z=0.013  GateMetal top = Source/Drain top
+
+	(sdegeo:create-cuboid (position -0.03 -0.015 -0.05) (position 0.03 0.015 0) "Silicon" "Substrate")
+
+	(sdegeo:create-cuboid (position -0.02 -0.005 0) (position -0.01 0.005 0.013) "Silicon" "Source")
+	(sdegeo:create-cuboid (position  0.01 -0.005 0) (position  0.02 0.005 0.013) "Silicon" "Drain")
+
+	(sdegeo:create-cuboid (position -0.01 -0.003 0.003) (position 0.01 0.003 0.005) "Silicon" "Nanosheet1")
+	(sdegeo:create-cuboid (position -0.01 -0.003 0.009) (position 0.01 0.003 0.011) "Silicon" "Nanosheet2")
+
+	(sdegeo:set-default-boolean "BAB")
+	; SiO2 gate oxide — 1nm wrapping each nanosheet in z, 1nm in x and y
+	(sdegeo:create-cuboid (position -0.011 -0.004 0.002) (position 0.011 0.004 0.006) "SiO2" "GateOx1")
+	(sdegeo:create-cuboid (position -0.011 -0.004 0.008) (position 0.011 0.004 0.012) "SiO2" "GateOx2")
+
+	(sdegeo:set-default-boolean "ABA")
+	; BaseOx: 1nm SiO2 isolates substrate from GateMetal
+	(sdegeo:create-cuboid (position -0.02 -0.005 0.000) (position 0.02 0.005 0.001) "SiO2" "BaseOx")
+	(sdegeo:create-cuboid (position -0.01  0.003 -0.005) (position 0.01  0.015 0) "SiO2" "TrenchOx_left")
+	(sdegeo:create-cuboid (position -0.01 -0.015 -0.005) (position 0.01 -0.003 0) "SiO2" "TrenchOx_right")
+
+
+	(sdegeo:set-default-boolean "BAB")
+	; TiN GateMetal: 1nm wrap in x (±0.011→±0.012) and y (±0.004→±0.005)
+	(sdegeo:create-cuboid (position -0.007 -0.005 0.001) (position 0.007 0.005 0.013) "TiN" "GateMetal")
+
+# Create contacts
+#----------------
+	(sdegeo:define-contact-set "gate"      4 (color:rgb 1 0 0) "--")
+	(sdegeo:define-contact-set "drain"     4 (color:rgb 0 0 1) "||")
+	(sdegeo:define-contact-set "source"    4 (color:rgb 0 1 0) "==")
+	(sdegeo:define-contact-set "substrate" 4 (color:rgb 1 1 0) "//")
+
+
+# Set contacts
+#-------------
+	(sdegeo:set-current-contact-set "substrate")
+	(sdegeo:define-3d-contact (list (car (find-face-id (position 0 0 -0.05)))) "substrate")
+
+	; Gate: 6 probes on TiN GateMetal z[0.001,0.013]
+	
+(sdegeo:set-current-contact-set "gate")
+(sdegeo:define-3d-contact (list (car (find-face-id (position 0.001  0.001  0.013)))) "gate") ; top face
+(sdegeo:define-3d-contact (list (car (find-face-id (position 0.001 -0.005  0.007)))) "gate") ; front mid (solid TiN at z=0.007)
+(sdegeo:define-3d-contact (list (car (find-face-id (position 0.001  0.005  0.007)))) "gate") ; back mid
+(sdegeo:define-3d-contact (list (car (find-face-id (position 0.001 -0.005  0.0015)))) "gate") ; bottom front — solid TiN z[0.001,0.002]
+(sdegeo:define-3d-contact (list (car (find-face-id (position 0.001  0.005  0.0015)))) "gate") ; bottom back
+
+
+	(sdegeo:set-current-contact-set "drain")
+	(sdegeo:define-3d-contact (list (car (find-face-id (position  0.02 0.0 0.006)))) "drain")
+
+	(sdegeo:set-current-contact-set "source")
+	(sdegeo:define-3d-contact (list (car (find-face-id (position -0.02 0.0 0.006)))) "source")
+
+
+# Constant Doping
+#----------------
+	(sdedr:define-constant-profile "Constant.Substrate" "BoronActiveConcentration" 5e17)
+	(sdedr:define-constant-profile-region "PlaceCD.Substrate" "Constant.Substrate" "Substrate")
+
+	(sdedr:define-constant-profile "Constant.Nanosheet1" "BoronActiveConcentration" 5e17)
+	(sdedr:define-constant-profile-region "PlaceCD.Nanosheet1" "Constant.Nanosheet1" "Nanosheet1")
+
+	(sdedr:define-constant-profile "Constant.Nanosheet2" "BoronActiveConcentration" 5e17)
+	(sdedr:define-constant-profile-region "PlaceCD.Nanosheet2" "Constant.Nanosheet2" "Nanosheet2")
+
+	(sdedr:define-constant-profile "Constant.Source" "ArsenicActiveConcentration" 5e19)
+	(sdedr:define-constant-profile-region "PlaceCD.Source" "Constant.Source" "Source")
+
+	(sdedr:define-constant-profile "Constant.Drain" "ArsenicActiveConcentration" 5e19)
+	(sdedr:define-constant-profile-region "PlaceCD.Drain" "Constant.Drain" "Drain")
+
+
+# Analytical Doping
+#------------------
+	(sdedr:define-refeval-window "BaseLine.NS1Left" "Rectangle" (position -0.01 -0.003 0.003) (position -0.01 0.003 0.005))
+	(sdedr:define-analytical-profile-placement "PlaceAP.NS1Left" "Gauss.NS1Left" "BaseLine.NS1Left" "Positive" "NoReplace" "Eval")
+	(sdedr:define-gaussian-profile "Gauss.NS1Left" "ArsenicActiveConcentration" "PeakPos" 0 "PeakVal" 5e19 "ValueAtDepth" 1e17 "Depth" 0.003 "Gauss" "Factor" 0.8)
+
+	(sdedr:define-refeval-window "BaseLine.NS1Right" "Rectangle" (position 0.01 -0.003 0.003) (position 0.01 0.003 0.005))
+	(sdedr:define-analytical-profile-placement "PlaceAP.NS1Right" "Gauss.NS1Right" "BaseLine.NS1Right" "Negative" "NoReplace" "Eval")
+	(sdedr:define-gaussian-profile "Gauss.NS1Right" "ArsenicActiveConcentration" "PeakPos" 0 "PeakVal" 5e19 "ValueAtDepth" 1e17 "Depth" 0.003 "Gauss" "Factor" 0.8)
+
+	(sdedr:define-refeval-window "BaseLine.NS2Left" "Rectangle" (position -0.01 -0.003 0.009) (position -0.01 0.003 0.011))
+	(sdedr:define-analytical-profile-placement "PlaceAP.NS2Left" "Gauss.NS2Left" "BaseLine.NS2Left" "Positive" "NoReplace" "Eval")
+	(sdedr:define-gaussian-profile "Gauss.NS2Left" "ArsenicActiveConcentration" "PeakPos" 0 "PeakVal" 5e19 "ValueAtDepth" 1e17 "Depth" 0.003 "Gauss" "Factor" 0.8)
+
+	(sdedr:define-refeval-window "BaseLine.NS2Right" "Rectangle" (position 0.01 -0.003 0.009) (position 0.01 0.003 0.011))
+	(sdedr:define-analytical-profile-placement "PlaceAP.NS2Right" "Gauss.NS2Right" "BaseLine.NS2Right" "Negative" "NoReplace" "Eval")
+	(sdedr:define-gaussian-profile "Gauss.NS2Right" "ArsenicActiveConcentration" "PeakPos" 0 "PeakVal" 5e19 "ValueAtDepth" 1e17 "Depth" 0.003 "Gauss" "Factor" 0.8)
+
+
+# Mesh Refinement
+#----------------
+	(sdedr:define-refeval-window "RefWin.Global" "Cuboid" (position -0.04 -0.02 -0.06) (position 0.04 0.02 0.015))
+	(sdedr:define-refinement-size "RefDef.Global" 0.005 0.005 0.005 0.001 0.001 0.001)
+	(sdedr:define-refinement-placement "Place.Global" "RefDef.Global" (list "window" "RefWin.Global"))
+
+	(sdedr:define-refeval-window "RefWin.Top" "Cuboid" (position -0.025 -0.01 -0.003) (position 0.025 0.01 0.015))
+	(sdedr:define-refinement-size "RefDef.Top" 0.002 0.002 0.002 0.001 0.001 0.001)
+	(sdedr:define-refinement-placement "Place.Top" "RefDef.Top" (list "window" "RefWin.Top"))
+
+# Build Mesh
+#-----------
+	(sde:set-meshing-command "snmesh -a -c boxmethod")
+	(sdedr:append-cmd-file "")
+	(sde:build-mesh "snmesh" "-a -c boxmethod" "n@node@")
+
+# Open Visual
+#------------
+	;#(system:command "svisual n@node@_msh.tdr &")
+
+# Save
+#-----
+	(sde:save-model "n@node@_msh.tdr")
+
+
