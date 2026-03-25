@@ -1,0 +1,96 @@
+clear
+clc 
+close all
+
+%% LOAD DATA
+IdVd_sat = readmatrix('IdVd SATURATION.csv');
+IdVg_sat = readmatrix('IdVg SATURATION.csv');
+IdVg_lin = readmatrix('IdVg LINEAR.csv');
+
+Vg_lin = IdVg_lin(:,1);
+Id_lin = IdVg_lin(:,2);
+Vg_sat = IdVg_sat(:,1);
+Id_sat = IdVg_sat(:,2);
+Vd_sat = IdVd_sat(:,1);
+Idd_sat = IdVd_sat(:,2);
+
+%% ===============================
+% 1. gm (transconductance) (can be calculated in both lin/sat)
+% from Id-Vg in linear region
+%% ===============================
+
+gm_lin = gradient(Id_lin)./gradient(Vg_lin); %gm = dId/dVg in linear
+gm_lin_max = max(gm_lin);
+
+%% ===============================
+% 2. Vth (linear region) using gm_lin extrapolation
+%% ===============================
+
+VDS_lin = 0.01; % tandard bias condition used for linear region 
+
+[gm_peak, idx] = max(gm_lin); 
+Vg_gm = Vg_lin(idx);
+Id_gm = Id_lin(idx);
+
+Vth_lin_uncorr = Vg_gm - Id_gm/gm_peak;
+
+% Apply VDS/2 correction to account for the fact that the linear region is not at VDS=0 but at a small finite VDS
+Vth_lin = Vth_lin_uncorr + VDS_lin/2;
+
+%% ===============================
+% 3. Vth (saturation) using sqrt(Id) extrapolation
+%% ===============================
+sqrtId_sat = sqrt(abs(Id_sat));
+gm_sqrt = gradient(sqrtId_sat) ./ gradient(Vg_sat);
+[~, idx_sat] = max(gm_sqrt);
+Vth_sat = Vg_sat(idx_sat) - sqrtId_sat(idx_sat) / gm_sqrt(idx_sat);
+
+%% ===============================
+% 5. DIBL
+%% ===============================
+VDS_sat = max(Vd_sat);
+DIBL = abs(Vth_lin - Vth_sat)/(VDS_sat - VDS_lin) * 1000;
+
+%% ===============================
+% 4. Subthreshold Swing (SS)
+%% ===============================
+logId = log10(abs(Id_sat));
+dlogI_dV = gradient(logId) ./ gradient(Vg_sat);  % m = dlog(I)/dV
+m_max = max(dlogI_dV);                             % maximum slope
+SS_mV = (1/m_max) * 1000;                          % S = 1/m_max, in mV/dec
+
+%% ===============================
+% 6. Output conductance gd
+% from Id-Vd saturation
+%% ===============================
+
+gd = gradient(Idd_sat)./gradient(Vd_sat);
+gd_sat = gd(end); % gradient at the highest VDS point
+
+%% ===============================
+% Ion / Ioff (Approach 2)
+%% ===============================
+VDD = max(Vd_sat);
+Vth = Vth_sat;
+Voff = Vth - abs(Vth);
+Von  = VDD + Vth - abs(Vth);
+[~,idx_off] = min(abs(Vg_sat - Voff));
+[~,idx_on]  = min(abs(Vg_sat - Von));
+
+Ioff = Id_sat(idx_off);
+Ion  = Id_sat(idx_on);
+Ion_Ioff = Ion/Ioff;
+
+%% ===============================
+% PRINT RESULTS
+%% ===============================
+fprintf('\n------ DEVICE PARAMETERS ------\n')
+fprintf('gm_lin_max = %e S\n',gm_lin_max)
+fprintf('Vth_lin = %.4f V\n',Vth_lin)
+fprintf('Vth_sat = %.4f V\n',Vth_sat)
+fprintf('SS = %.2f mV/dec\n',SS_mV)
+fprintf('DIBL = %.4f mV/V\n',DIBL)
+fprintf('gd = %e S\n',gd_sat)
+fprintf('Ion = %e A\n',Ion)
+fprintf('Ioff = %e A\n',Ioff)
+fprintf('Ion/Ioff = %e\n',Ion_Ioff)
