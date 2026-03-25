@@ -1,0 +1,332 @@
+clear
+clc
+close all
+
+%% ===============================
+%  LOAD DATA - Rounded, Unrounded, Nanosheet
+%% ===============================
+
+% --- Unrounded ---
+IdVd_sat_ur  = readmatrix('IdVd_SATURATION NEW CORRECT PAR.csv');
+IdVg_sat_ur  = readmatrix('IdVg_SATURATION NEW CORRECT PAR.csv');
+IdVg_lin_ur  = readmatrix('IdVg linear new2.csv');
+
+% --- Rounded ---
+IdVd_sat_r   = readmatrix('IdVd rounded saturation.csv');
+IdVg_sat_r   = readmatrix('IdVg rounded saturation .csv');
+IdVg_lin_r   = readmatrix('IdVg rounded linear .csv');
+
+% --- Nanosheet ---
+IdVd_sat_ns  = readmatrix('idvd sat nano3rdtry.csv');
+IdVg_sat_ns  = readmatrix('idvg sat nano3rdtry.csv');
+IdVg_lin_ns  = readmatrix('idvg linear nano3rdtry.csv');
+
+%% ===============================
+%  EXTRACT COLUMNS
+%% ===============================
+
+% Unrounded
+Vg_lin_ur  = IdVg_lin_ur(:,1);   Id_lin_ur  = IdVg_lin_ur(:,2);
+Vg_sat_ur  = IdVg_sat_ur(:,1);   Id_sat_ur  = IdVg_sat_ur(:,2);
+Vd_sat_ur  = IdVd_sat_ur(:,1);   Idd_sat_ur = IdVd_sat_ur(:,2);
+
+% Rounded
+Vg_lin_r   = IdVg_lin_r(:,1);    Id_lin_r   = IdVg_lin_r(:,2);
+Vg_sat_r   = IdVg_sat_r(:,1);    Id_sat_r   = IdVg_sat_r(:,2);
+Vd_sat_r   = IdVd_sat_r(:,1);    Idd_sat_r  = IdVd_sat_r(:,2);
+
+% Nanosheet
+Vg_lin_ns  = IdVg_lin_ns(:,1);   Id_lin_ns  = abs(IdVg_lin_ns(:,2)); % abs() for negative values
+Vg_sat_ns  = IdVg_sat_ns(:,1);   Id_sat_ns  = IdVg_sat_ns(:,2);
+Vd_sat_ns  = IdVd_sat_ns(:,1);   Idd_sat_ns = IdVd_sat_ns(:,2);
+
+%% ===============================
+%  PARAMETERS - UNROUNDED
+%% ===============================
+
+VDS_lin = 0.01;
+
+% --- gm in LINEAR region ---
+gm_lin_ur            = gradient(Id_lin_ur) ./ gradient(Vg_lin_ur);
+gm_lin_max_ur        = max(gm_lin_ur);
+[gm_peak_ur, idx_ur] = max(gm_lin_ur);
+Vth_lin_ur           = (Vg_lin_ur(idx_ur) - Id_lin_ur(idx_ur)/gm_peak_ur) + VDS_lin/2;
+
+% --- gm in SATURATION region ---
+gm_sat_ur            = gradient(Id_sat_ur) ./ gradient(Vg_sat_ur);
+gm_sat_max_ur        = max(gm_sat_ur);
+
+% --- sqrt(Id) method for Vth_sat extraction ---
+sqrtId_sat_ur        = sqrt(abs(Id_sat_ur));
+gm_sqrt_ur           = gradient(sqrtId_sat_ur) ./ gradient(Vg_sat_ur);
+[~, idx_sat_ur]      = max(gm_sqrt_ur);
+Vth_sat_ur           = Vg_sat_ur(idx_sat_ur) - sqrtId_sat_ur(idx_sat_ur)/gm_sqrt_ur(idx_sat_ur);
+
+VDS_sat_ur           = max(Vd_sat_ur);
+DIBL_ur              = abs(Vth_lin_ur - Vth_sat_ur) / (VDS_sat_ur - VDS_lin) * 1000;
+
+logId_ur             = log10(abs(Id_sat_ur));
+dlogI_dV_ur          = gradient(logId_ur) ./ gradient(Vg_sat_ur);
+SS_mV_ur             = (1/max(dlogI_dV_ur)) * 1000;
+
+gd_ur                = gradient(Idd_sat_ur) ./ gradient(Vd_sat_ur);
+gd_sat_ur            = gd_ur(end);
+
+VDD_ur               = max(Vd_sat_ur);
+Voff_ur              = Vth_sat_ur - abs(Vth_sat_ur);
+Von_ur               = VDD_ur + Vth_sat_ur - abs(Vth_sat_ur);
+[~, idx_off_ur]      = min(abs(Vg_sat_ur - Voff_ur));
+[~, idx_on_ur]       = min(abs(Vg_sat_ur - Von_ur));
+Ioff_ur              = Id_sat_ur(idx_off_ur);
+Ion_ur               = Id_sat_ur(idx_on_ur);
+Ion_Ioff_ur          = Ion_ur / Ioff_ur;
+
+%% ===============================
+%  PARAMETERS - ROUNDED
+%% ===============================
+
+% --- gm in LINEAR region ---
+gm_lin_r             = gradient(Id_lin_r) ./ gradient(Vg_lin_r);
+gm_lin_max_r         = max(gm_lin_r);
+[gm_peak_r, idx_r]   = max(gm_lin_r);
+Vth_lin_r            = (Vg_lin_r(idx_r) - Id_lin_r(idx_r)/gm_peak_r) + VDS_lin/2;
+
+% --- gm in SATURATION region ---
+gm_sat_r             = gradient(Id_sat_r) ./ gradient(Vg_sat_r);
+gm_sat_max_r         = max(gm_sat_r);
+
+% --- sqrt(Id) method for Vth_sat extraction ---
+sqrtId_sat_r         = sqrt(abs(Id_sat_r));
+gm_sqrt_r            = gradient(sqrtId_sat_r) ./ gradient(Vg_sat_r);
+[~, idx_sat_r]       = max(gm_sqrt_r);
+Vth_sat_r            = Vg_sat_r(idx_sat_r) - sqrtId_sat_r(idx_sat_r)/gm_sqrt_r(idx_sat_r);
+
+VDS_sat_r            = max(Vd_sat_r);
+DIBL_r               = abs(Vth_lin_r - Vth_sat_r) / (VDS_sat_r - VDS_lin) * 1000;
+
+logId_r              = log10(abs(Id_sat_r));
+dlogI_dV_r           = gradient(logId_r) ./ gradient(Vg_sat_r);
+SS_mV_r              = (1/max(dlogI_dV_r)) * 1000;
+
+gd_r                 = gradient(Idd_sat_r) ./ gradient(Vd_sat_r);
+gd_sat_r             = gd_r(end);
+
+VDD_r                = max(Vd_sat_r);
+Voff_r               = Vth_sat_r - abs(Vth_sat_r);
+Von_r                = VDD_r + Vth_sat_r - abs(Vth_sat_r);
+[~, idx_off_r]       = min(abs(Vg_sat_r - Voff_r));
+[~, idx_on_r]        = min(abs(Vg_sat_r - Von_r));
+Ioff_r               = Id_sat_r(idx_off_r);
+Ion_r                = Id_sat_r(idx_on_r);
+Ion_Ioff_r           = Ion_r / Ioff_r;
+
+%% ===============================
+%  PARAMETERS - NANOSHEET
+%% ===============================
+
+% --- gm in LINEAR region ---
+gm_lin_ns            = gradient(Id_lin_ns) ./ gradient(Vg_lin_ns);
+gm_lin_max_ns        = max(gm_lin_ns);
+[gm_peak_ns, idx_ns] = max(gm_lin_ns);
+Vth_lin_ns           = (Vg_lin_ns(idx_ns) - Id_lin_ns(idx_ns)/gm_peak_ns) + VDS_lin/2;
+
+% --- gm in SATURATION region ---
+gm_sat_ns            = gradient(Id_sat_ns) ./ gradient(Vg_sat_ns);
+gm_sat_max_ns        = max(gm_sat_ns);
+
+% --- sqrt(Id) method for Vth_sat extraction ---
+sqrtId_sat_ns        = sqrt(abs(Id_sat_ns));
+gm_sqrt_ns           = gradient(sqrtId_sat_ns) ./ gradient(Vg_sat_ns);
+[~, idx_sat_ns]      = max(gm_sqrt_ns);
+Vth_sat_ns           = Vg_sat_ns(idx_sat_ns) - sqrtId_sat_ns(idx_sat_ns)/gm_sqrt_ns(idx_sat_ns);
+
+VDS_sat_ns           = max(Vd_sat_ns);
+DIBL_ns              = abs(Vth_lin_ns - Vth_sat_ns) / (VDS_sat_ns - VDS_lin) * 1000;
+
+logId_ns             = log10(abs(Id_sat_ns));
+dlogI_dV_ns          = gradient(logId_ns) ./ gradient(Vg_sat_ns);
+SS_mV_ns             = (1/max(dlogI_dV_ns)) * 1000;
+
+gd_ns                = gradient(Idd_sat_ns) ./ gradient(Vd_sat_ns);
+gd_sat_ns            = gd_ns(end);
+
+VDD_ns               = max(Vd_sat_ns);
+Voff_ns              = Vth_sat_ns - abs(Vth_sat_ns);
+Von_ns               = VDD_ns + Vth_sat_ns - abs(Vth_sat_ns);
+[~, idx_off_ns]      = min(abs(Vg_sat_ns - Voff_ns));
+[~, idx_on_ns]       = min(abs(Vg_sat_ns - Von_ns));
+Ioff_ns              = Id_sat_ns(idx_off_ns);
+Ion_ns               = Id_sat_ns(idx_on_ns);
+Ion_Ioff_ns          = Ion_ns / Ioff_ns;
+
+%% ===============================
+%  PRINT RESULTS
+%% ===============================
+
+fprintf('\n%-25s  %-18s  %-18s  %-18s\n', 'Parameter', 'Rect. Fin', 'Rounded Fin', 'Nanosheet')
+fprintf('%s\n', repmat('-', 1, 85))
+fprintf('%-25s  %-18e  %-18e  %-18e\n',   'gm_lin_max (S)',  gm_lin_max_ur, gm_lin_max_r, gm_lin_max_ns)
+fprintf('%-25s  %-18e  %-18e  %-18e\n',   'gm_sat_max (S)',  gm_sat_max_ur, gm_sat_max_r, gm_sat_max_ns)
+fprintf('%-25s  %-18.4f  %-18.4f  %-18.4f\n', 'Vth_lin (V)',  Vth_lin_ur,    Vth_lin_r,    Vth_lin_ns)
+fprintf('%-25s  %-18.4f  %-18.4f  %-18.4f\n', 'Vth_sat (V)',  Vth_sat_ur,    Vth_sat_r,    Vth_sat_ns)
+fprintf('%-25s  %-18.2f  %-18.2f  %-18.2f\n', 'SS (mV/dec)',  SS_mV_ur,      SS_mV_r,      SS_mV_ns)
+fprintf('%-25s  %-18.4f  %-18.4f  %-18.4f\n', 'DIBL (mV/V)',  DIBL_ur,       DIBL_r,       DIBL_ns)
+fprintf('%-25s  %-18e  %-18e  %-18e\n',   'gd (S)',           gd_sat_ur,     gd_sat_r,     gd_sat_ns)
+fprintf('%-25s  %-18e  %-18e  %-18e\n',   'Ion (A)',          Ion_ur,        Ion_r,        Ion_ns)
+fprintf('%-25s  %-18e  %-18e  %-18e\n',   'Ioff (A)',         Ioff_ur,       Ioff_r,       Ioff_ns)
+fprintf('%-25s  %-18e  %-18e  %-18e\n',   'Ion/Ioff',         Ion_Ioff_ur,   Ion_Ioff_r,   Ion_Ioff_ns)
+
+%% ===============================
+%  PLOT 1: log(Id) vs Vgs — Linear + Saturation Combined (6 curves)
+%% ===============================
+
+figure('Visible','on');
+
+semilogy(Vg_sat_ur, Id_sat_ur, 'b-',  'LineWidth', 1.8, 'DisplayName', 'Rectangular Fin  (V_{DS} = 1.5 V)');
+hold on;
+semilogy(Vg_sat_r,  Id_sat_r,  'r-',  'LineWidth', 1.8, 'DisplayName', 'Rounded Fin (V_{DS} = 1.5 V)');
+semilogy(Vg_sat_ns, Id_sat_ns, 'g-',  'LineWidth', 1.8, 'DisplayName', 'NS GAAFET  (V_{DS} = 1.5 V)');
+semilogy(Vg_lin_ur, Id_lin_ur, 'b--', 'LineWidth', 1.8, 'DisplayName', 'Rectangular Fin  (V_{DS} = 10 mV)');
+semilogy(Vg_lin_r,  Id_lin_r,  'r--', 'LineWidth', 1.8, 'DisplayName', 'Rounded Fin (V_{DS} = 10 mV)');
+semilogy(Vg_lin_ns, Id_lin_ns, 'g--', 'LineWidth', 1.8, 'DisplayName', 'NS GAAFET  (V_{DS} = 10 mV)');
+hold off;
+
+xlabel('Gate Voltage, V_{GS} (V)', 'FontSize', 14);
+ylabel('Drain Current, I_D (A)',   'FontSize', 14);
+title('Transfer Characteristics: I_D vs V_{GS} (Log Scale)', 'FontSize', 14);
+legend('Location', 'best', 'FontSize', 13);
+grid on;
+
+%% ===============================
+%  PLOT 2: Id vs Vgs — Linear Scale
+%% ===============================
+
+figure('Visible','on');
+
+plot(Vg_sat_ur, Id_sat_ur, 'b-',  'LineWidth', 1.8, 'DisplayName', 'Rectangular Fin  (V_{DS} = 1.5 V)');
+hold on;
+plot(Vg_sat_r,  Id_sat_r,  'r-',  'LineWidth', 1.8, 'DisplayName', 'Rounded Fin (V_{DS} = 1.5 V)');
+plot(Vg_sat_ns, Id_sat_ns, 'g-',  'LineWidth', 1.8, 'DisplayName', 'NS GAAFET  (V_{DS} = 1.5 V)');
+plot(Vg_lin_ur, Id_lin_ur, 'b--', 'LineWidth', 1.8, 'DisplayName', 'Rectangular Fin  (V_{DS} = 10 mV)');
+plot(Vg_lin_r,  Id_lin_r,  'r--', 'LineWidth', 1.8, 'DisplayName', 'Rounded Fin (V_{DS} = 10 mV)');
+plot(Vg_lin_ns, Id_lin_ns, 'g--', 'LineWidth', 1.8, 'DisplayName', 'NS GAAFET  (V_{DS} = 10 mV)');
+
+
+hold off;
+
+xlabel('Gate Voltage, V_{GS} (V)', 'FontSize', 14);
+ylabel('Drain Current, I_D (A)',   'FontSize', 14);
+title('Transfer Characteristics: I_D vs V_{GS} (Linear Scale)', 'FontSize', 14);
+legend('Location', 'best', 'FontSize', 13);
+grid on;
+
+%% ===============================
+%  PLOT 3: Id vs Vds — Output Curve
+%% ===============================
+
+figure('Visible','on');
+plot(Vd_sat_ur, Idd_sat_ur, 'b-',  'LineWidth', 1.8); hold on;
+plot(Vd_sat_r,  Idd_sat_r,  'r--', 'LineWidth', 1.8);
+plot(Vd_sat_ns, Idd_sat_ns, 'g:',  'LineWidth', 2.2); hold off;
+xlim([0 1.5])
+xlabel('Drain Voltage, V_{DS} (V)', 'FontSize', 14);
+ylabel('Drain Current, I_D (A)',    'FontSize', 14);
+title('Output Characteristics: I_D vs V_{DS}', 'FontSize', 14);
+legend('Rectangular Fin', 'Rounded Fin', 'Nanosheet GAAFET', 'Location', 'best', 'FontSize', 14);
+grid on;
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%Vth linear
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+figure;
+yyaxis left
+
+% Main Id-Vgs curve
+plot(Vg_lin_ur, Id_lin_ur, 'b-', 'LineWidth', 2, 'DisplayName', 'I_D (linear)');
+hold on;
+
+% Tangent line at gm_max
+Vg_range = linspace(min(Vg_lin_ur), max(Vg_lin_ur), 200);
+Id_tangent_ur = gm_peak_ur * (Vg_range - Vg_lin_ur(idx_ur)) + Id_lin_ur(idx_ur);
+plot(Vg_range, Id_tangent_ur, 'r--', 'LineWidth', 1.5, 'DisplayName', 'Tangent at g_m^{max}');
+
+% Mark the gm_max point on Id curve
+plot(Vg_lin_ur(idx_ur), Id_lin_ur(idx_ur), 'ro', 'MarkerSize', 6, 'MarkerFaceColor', 'r', 'DisplayName', 'g_m^{max} point');
+
+ylim([-0.5e-6, 3e-6]);
+ylabel('I_D (A)', 'FontSize', 15);
+
+yyaxis right
+
+% gm curve
+plot(Vg_lin_ur, gm_lin_ur, 'm-', 'LineWidth', 1.5, 'DisplayName', 'g_m');
+
+% Mark peak gm point on gm curve
+plot(Vg_lin_ur(idx_ur), gm_peak_ur, 'ro', 'MarkerSize',6, 'MarkerFaceColor', 'm', 'DisplayName', sprintf('g_m^{max} = %.2e S', gm_peak_ur));
+
+ylabel('g_m (S)', 'FontSize',15);
+
+% Vth vertical line (added after yyaxis so it spans full plot)
+xline(Vth_lin_ur, 'k:', 'LineWidth', 1.5, 'DisplayName', sprintf('V_{th,lin} = %.3f V', Vth_lin_ur));
+
+% Convert the gm_max point and tangent point to figure normalised coordinates
+ax = gca;
+x_norm = (Vg_lin_ur(idx_ur) - ax.XLim(1)) / (ax.XLim(2) - ax.XLim(1));
+
+% gm_max point on right y-axis
+yyaxis right
+y_norm_top = (gm_peak_ur - ax.YLim(1)) / (ax.YLim(2) - ax.YLim(1));
+
+% Id point (tangent touches Id curve) on left y-axis
+yyaxis left
+y_norm_bot = (Id_lin_ur(idx_ur) - ax.YLim(1)) / (ax.YLim(2) - ax.YLim(1));
+
+% Map to figure coordinates using the axes position
+ax_pos = ax.Position;
+x_fig  = ax_pos(1) + x_norm  * ax_pos(3);
+y_fig_top = ax_pos(2) + y_norm_top * ax_pos(4);
+y_fig_bot = ax_pos(2) + y_norm_bot * ax_pos(4);
+
+annotation('line', [x_fig, x_fig], [y_fig_top, y_fig_bot], ...
+    'LineStyle', '--', 'LineWidth', 1.2, 'Color', [0.2 0.2 0.2]);
+hold off;
+xlabel('V_{GS} (V)', 'FontSize', 15);
+title('Linear V_{th} Extraction (Max-g_m Method), Rectangular fin FinFET', FontSize=13);
+legend('Location', 'best', 'FontSize',13'); 
+grid on;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%Vth saturation
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+figure;
+% sqrt(Id) vs Vgs
+plot(Vg_sat_ur, sqrtId_sat_ur, 'b-', 'LineWidth', 2, 'DisplayName', '\surdI_D (saturation)');
+hold on;
+
+% Tangent line at max of d(sqrt(Id))/dVg
+Vg_range2 = linspace(min(Vg_sat_ur), max(Vg_sat_ur), 200);
+sqrtId_tangent_ur = gm_sqrt_ur(idx_sat_ur) * (Vg_range2 - Vg_sat_ur(idx_sat_ur)) + sqrtId_sat_ur(idx_sat_ur);
+plot(Vg_range2, sqrtId_tangent_ur, 'r--', 'LineWidth', 1.5, 'DisplayName', 'Tangent at max d(\surdI_D)/dV_{GS}');
+
+% Zero line
+yline(0, 'k-', 'LineWidth', 0.8 ,'HandleVisibility', 'off');
+ylim([-0.5e-3, 7e-3])
+% Mark Vth_sat
+xline(Vth_sat_ur, 'k:', 'LineWidth', 1.5, 'DisplayName', sprintf('V_{th,sat} = %.3f V', Vth_sat_ur));
+
+% Mark the extraction point
+plot(Vg_sat_ur(idx_sat_ur), sqrtId_sat_ur(idx_sat_ur), 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r', 'DisplayName', 'Max d(\surdI_D)/dV_{GS} point');
+
+hold off;
+xlabel('V_{GS} (V)', 'FontSize',15); ylabel('\surdI_D (A^{1/2})', 'FontSize',15);
+title('Saturation V_{th} Extraction, Rectangular fin FinFET', 'FontSize',15);
+legend('Location', 'best', 'FontSize',16); grid on;
+
